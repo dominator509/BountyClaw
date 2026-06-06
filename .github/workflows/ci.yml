@@ -1,0 +1,128 @@
+name: BountyClaw CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.12"
+          - "3.13"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install package with dev gates
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Ruff format check
+        run: ruff format --check src tests scripts
+
+      - name: Ruff lint
+        run: ruff check src tests scripts
+
+      - name: Mypy type check
+        run: mypy src
+
+      - name: Bandit security scan
+        run: bandit -q -r src
+
+      - name: pip-audit dependency scan
+        run: pip-audit --progress-spinner off
+
+      - name: Compile source and tests
+        run: python -m compileall -q src tests scripts
+
+      - name: Unit tests
+        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q
+
+      - name: Phase 9 release-control verification
+        run: python scripts/phase9_verify.py --root .
+
+      - name: Phase 10 hardening verification
+        run: python scripts/phase10_verify.py --root .
+
+      - name: Phase 11 external-validation handoff verification
+        run: python scripts/phase11_verify.py --root .
+
+      - name: Phase 12 validation-evidence ledger verification
+        run: python scripts/phase12_verify.py --root .
+
+      - name: Phase 13 evidence-review workflow verification
+        run: python scripts/phase13_verify.py --root .
+
+      - name: Phase 14 gap tracker governance verification
+        run: python scripts/phase14_verify.py --root .
+
+      - name: Phase 15 validation-runbook verification
+        run: python scripts/phase15_verify.py --root .
+
+      - name: Phase 16 validation-baseline verification
+        run: python scripts/phase16_verify.py --root .
+
+      - name: Phase 17 closure-gate verification
+        run: python scripts/phase17_verify.py --root .
+
+      - name: Phase 18 readiness-dashboard verification
+        run: python scripts/phase18_verify.py --root .
+
+      - name: Phase 19 quality/security gate verification
+        run: python scripts/phase19_verify.py --root .
+
+  package:
+    name: Package smoke validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+
+      - name: Build wheel and source distribution
+        run: python -m build
+
+      - name: Clean install wheel and smoke test CLI
+        run: |
+          python -m venv /tmp/bountyclaw-smoke-venv
+          /tmp/bountyclaw-smoke-venv/bin/python -m pip install --upgrade pip
+          /tmp/bountyclaw-smoke-venv/bin/python -m pip install dist/*.whl
+          /tmp/bountyclaw-smoke-venv/bin/bountyclaw doctor
