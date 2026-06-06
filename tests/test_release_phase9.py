@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from bountyclaw.cli import app
 from bountyclaw.release import (
     build_release_checklist,
     build_release_rollback_plan,
+    service,
     verify_release_controls,
 )
 
@@ -72,6 +75,51 @@ def test_release_rollback_plan_is_reversible_without_external_resources() -> Non
     assert plan.external_resources_created is False
     assert any("PHASE_9_SUBROADMAP.md" in step for step in plan.steps)
     assert any("Phase 8" in fallback for fallback in plan.preserved_fallbacks)
+
+
+def test_release_verification_reports_local_tool_version_for_available_tools(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = repo_root()
+
+    def _which(_: str) -> str:
+        return "C:/Python/Tools/fake-tool.exe"
+
+    def _run(cmd: list[str] | tuple[str, ...], **_) -> subprocess.CompletedProcess[str]:
+        tool = cmd[0]
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout=f"{tool} 9.9.9",
+            stderr="",
+        )
+
+    monkeypatch.setattr(service.shutil, "which", _which)
+    monkeypatch.setattr(service.subprocess, "run", _run)
+    result = verify_release_controls(root)
+
+    checks = {check.check_id: check for check in result.checks}
+    assert checks["REL-LOCAL-TOOL-ruff"].status == "pass"
+    assert checks["REL-LOCAL-TOOL-mypy"].status == "pass"
+    assert checks["REL-LOCAL-TOOL-bandit"].status == "pass"
+    assert checks["REL-LOCAL-TOOL-pip-audit"].status == "pass"
+    assert "path=C:/Python/Tools/fake-tool.exe" in checks["REL-LOCAL-TOOL-ruff"].evidence
+
+
+def test_release_verification_degrades_tool_checks_to_deferred_on_missing_tool(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = repo_root()
+
+    monkeypatch.setattr(service.shutil, "which", lambda _: None)
+    result = verify_release_controls(root)
+
+    deferred = {check.check_id: check for check in result.checks if check.status == "deferred"}
+    for dependency in ("ruff", "mypy", "bandit", "pip-audit"):
+        if dependency == "python":
+            continue
+        assert f"REL-LOCAL-TOOL-{dependency}" in deferred
+        assert "does not currently expose" in deferred[f"REL-LOCAL-TOOL-{dependency}"].deferred_reason
 
 
 def test_release_cli_commands_render_json() -> None:
