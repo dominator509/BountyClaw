@@ -646,6 +646,6 @@ The Quality Gate Controller is responsible for local test, compile, format, lint
 Mandatory Phase 19 handoff behavior:
 
 - Preserve `QUALITY_GATES_PHASE19.md` as the local gate execution record.
-- Keep `pip-audit` marked deferred until approved network or internal advisory mirror access is available.
+- Keep `pip-audit` tracked as locally executed-with-constraints until reviewed evidence, hosted execution, and optional advisory-mirror validation complete.
 - Route gate evidence through Phase 12 validation-evidence, Phase 13 review, Phase 17 closure-gate, and Phase 14 gap-tracker governance before closing related gaps.
 - Preserve all no-target-contact, no-live-provider, no-real-MCP/browser, no-active-validation, and no-submission boundaries.
