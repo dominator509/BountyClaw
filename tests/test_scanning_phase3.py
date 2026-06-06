@@ -186,6 +186,26 @@ urllib3<1.26
     return repo
 
 
+def make_dependency_repo_with_poetry_lock(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo-deps-poetry-lock"
+    repo.mkdir()
+    (repo / "poetry.lock").write_text(
+        "\n".join(
+            [
+                "[[package]]",
+                'name = "urllib3"',
+                'version = "1.25.11"',
+                "",
+                "[[package]]",
+                'name = "jinja2"',
+                'version = "2.11.2"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return repo
+
+
 def make_python_and_dependency_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo-mixed"
     (repo / "src").mkdir(parents=True)
@@ -278,6 +298,27 @@ def test_dependency_manifest_scanner_supports_project_toml_and_pipfile_lock(
         "dep.vuln-requests-old",
         "dep.vuln-urllib3-old",
     }.issubset(rules)
+
+
+def test_dependency_manifest_scanner_supports_poetry_lock_file(
+    tmp_path: Path,
+) -> None:
+    repo = make_dependency_repo_with_poetry_lock(tmp_path)
+    manifest_path = write_manifest(tmp_path, repo)
+    loaded_scope = load_scope_manifest(manifest_path)
+
+    result = scan_authorized_repository(
+        loaded_scope,
+        repo,
+        scanner_ids=["builtin.dependency.manifest"],
+        local_scanner_enabled=True,
+    )
+
+    rules = {finding.rule_id for finding in result.findings}
+    assert rules == {
+        "dep.vuln-jinja2-old",
+        "dep.vuln-urllib3-old",
+    }
 
 
 def test_scan_without_scanner_override_runs_default_scan_set(

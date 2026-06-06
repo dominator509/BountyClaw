@@ -142,6 +142,8 @@ def _scan_manifest(
         return _scan_pyproject(context, manifest_path)
     if manifest_path.name == "Pipfile.lock":
         return _scan_pipfile_lock(context, manifest_path)
+    if manifest_path.name == "poetry.lock":
+        return _scan_poetry_lock(context, manifest_path)
     return []
 
 
@@ -151,6 +153,7 @@ def _find_dependency_files(root: Path) -> list[Path]:
         "requirements-dev.txt",
         "pyproject.toml",
         "Pipfile.lock",
+        "poetry.lock",
     ]
     return [root / name for name in candidates if (root / name).exists()]
 
@@ -308,6 +311,42 @@ def _scan_pipfile_lock(context: ScannerContext, path: Path) -> list[PreliminaryF
                         version_request=requested_version,
                     )
                 )
+    return findings
+
+
+def _scan_poetry_lock(context: ScannerContext, path: Path) -> list[PreliminaryFinding]:
+    relative_path = path.relative_to(context.repository_root).as_posix()
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+
+    packages = payload.get("package")
+    if not isinstance(packages, list):
+        return []
+
+    findings: list[PreliminaryFinding] = []
+    for package in packages:
+        if not isinstance(package, dict):
+            continue
+        name = package.get("name")
+        version = package.get("version")
+        if not isinstance(name, str) or not isinstance(version, str):
+            continue
+        parsed = _parse_requirement_text(f"{name}=={version}")
+        if parsed is None:
+            continue
+        package_name, specifiers = parsed
+        for rule, requested_version in _matching_rules(package_name, specifiers):
+            findings.append(
+                _finding_for_rule(
+                    rule=rule,
+                    context=context,
+                    relative_path=relative_path,
+                    line_number=None,
+                    version_request=requested_version,
+                )
+            )
     return findings
 
 
