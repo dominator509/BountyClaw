@@ -165,7 +165,6 @@ from .repository import (
     plan_authorized_repository_scan,
 )
 from .scanning import (
-    DEFAULT_SCANNER_ID,
     ScannerAuthorizationError,
     ScannerFeatureGateError,
     ScannerRunResult,
@@ -1924,9 +1923,12 @@ def scan_repo(
         ),
     ],
     scanner: Annotated[
-        str,
-        typer.Option("--scanner", help="Allowlisted scanner adapter ID."),
-    ] = DEFAULT_SCANNER_ID,
+        str | None,
+        typer.Option(
+            "--scanner",
+            help="Allowlisted scanner adapter ID. Omit to run all allowlisted adapters.",
+        ),
+    ] = None,
     enable_local_scanner: Annotated[
         bool,
         typer.Option(
@@ -1955,7 +1957,7 @@ def scan_repo(
         result = scan_authorized_repository(
             loaded_scope,
             repo,
-            scanner_ids=[scanner],
+            scanner_ids=[scanner] if scanner else None,
             local_scanner_enabled=enable_local_scanner,
         )
     except ScannerFeatureGateError as exc:
@@ -2046,9 +2048,12 @@ def collect_findings(
         ),
     ] = Path(".bountyclaw/evidence.sqlite"),
     scanner: Annotated[
-        str,
-        typer.Option("--scanner", help="Allowlisted scanner adapter ID."),
-    ] = DEFAULT_SCANNER_ID,
+        str | None,
+        typer.Option(
+            "--scanner",
+            help="Allowlisted scanner adapter ID. Omit to run all allowlisted adapters.",
+        ),
+    ] = None,
     enable_local_scanner: Annotated[
         bool,
         typer.Option(
@@ -2078,7 +2083,7 @@ def collect_findings(
             loaded_scope,
             repo,
             store_path=store,
-            scanner_ids=[scanner],
+            scanner_ids=[scanner] if scanner else None,
             local_scanner_enabled=enable_local_scanner,
         )
     except FindingsAuthorizationError as exc:

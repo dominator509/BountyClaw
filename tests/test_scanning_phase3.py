@@ -106,7 +106,10 @@ def test_builtin_python_scanner_produces_preliminary_findings_without_source_exc
     assert result.llm_used is False
     assert result.mcp_used is False
     assert result.browser_used is False
-    assert {adapter.scanner_id for adapter in result.adapters} == {"builtin.python.static"}
+    assert {adapter.scanner_id for adapter in result.adapters} == {
+        "builtin.python.static",
+        "builtin.dependency.manifest",
+    }
     rules = {finding.rule_id for finding in result.findings}
     assert rules == {
         "python.eval-call",
@@ -178,6 +181,21 @@ urllib3<1.26
                 },
             }
         ),
+        encoding="utf-8",
+    )
+    return repo
+
+
+def make_python_and_dependency_repo(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo-mixed"
+    (repo / "src").mkdir(parents=True)
+    (repo / "src" / "app.py").write_text(
+        "import os\n\ndef run_payload(payload: str) -> None:\n    os.system(payload)\n",
+        encoding="utf-8",
+    )
+    (repo / "requirements.txt").write_text("urllib3<1.26\n", encoding="utf-8")
+    (repo / "pyproject.toml").write_text(
+        "[project]\nname='scan-mixed-fixture'\ndependencies=['requests<2.31']\n",
         encoding="utf-8",
     )
     return repo
@@ -260,6 +278,26 @@ def test_dependency_manifest_scanner_supports_project_toml_and_pipfile_lock(
         "dep.vuln-requests-old",
         "dep.vuln-urllib3-old",
     }.issubset(rules)
+
+
+def test_scan_without_scanner_override_runs_default_scan_set(
+    tmp_path: Path,
+) -> None:
+    repo = make_python_and_dependency_repo(tmp_path)
+    manifest_path = write_manifest(tmp_path, repo)
+    loaded_scope = load_scope_manifest(manifest_path)
+
+    result = scan_authorized_repository(loaded_scope, repo, local_scanner_enabled=True)
+
+    assert result.scanners_execute is True
+    assert {adapter.scanner_id for adapter in result.adapters} == {
+        "builtin.python.static",
+        "builtin.dependency.manifest",
+    }
+    rules = {finding.rule_id for finding in result.findings}
+    assert "python.os-system" in rules
+    assert "dep.vuln-urllib3-old" in rules
+    assert "dep.vuln-requests-old" in rules
 
 
 def test_builtin_python_scanner_is_deterministic(tmp_path: Path) -> None:
@@ -355,7 +393,7 @@ def test_scan_repo_cli_outputs_json_findings_when_authorized_and_enabled(tmp_pat
     payload = json.loads(result.output)
     assert payload["scanners_execute"] is True
     assert payload["network_used"] is False
-    assert payload["adapters"][0]["scanner_id"] == "builtin.python.static"
+    assert any(item["scanner_id"] == "builtin.python.static" for item in payload["adapters"])
     assert {finding["rule_id"] for finding in payload["findings"]} >= {
         "python.eval-call",
         "python.subprocess-shell-true",

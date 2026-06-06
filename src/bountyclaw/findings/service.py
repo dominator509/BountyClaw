@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from bountyclaw.scanning import DEFAULT_SCANNER_ID, scan_authorized_repository
+from bountyclaw.scanning import scan_authorized_repository
 from bountyclaw.scope import ScopeGate, Target, TargetKind
 from bountyclaw.scope.loader import LoadedScopeManifest
 from bountyclaw.scope.models import ScopeDecision
@@ -37,7 +37,7 @@ def collect_authorized_findings(
     scan_result = scan_authorized_repository(
         loaded_scope,
         repo,
-        scanner_ids=scanner_ids or [DEFAULT_SCANNER_ID],
+        scanner_ids=scanner_ids,
         local_scanner_enabled=local_scanner_enabled,
     )
     normalization = normalize_scanner_run(scan_result)

@@ -11,7 +11,7 @@ from bountyclaw.scope.loader import LoadedScopeManifest
 from bountyclaw.scope.models import ScopeDecision
 
 from .models import PreliminaryFinding, ScannerContext, ScannerRunResult
-from .registry import DEFAULT_SCANNER_ID, ScannerRegistry, default_registry
+from .registry import ScannerRegistry, default_registry
 
 
 class ScannerAuthorizationError(RuntimeError):
@@ -56,7 +56,7 @@ def scan_authorized_repository(
     _require_allowed(loaded_scope, repo, action="scan.local_static")
 
     active_registry = registry or default_registry()
-    selected_ids = scanner_ids or [DEFAULT_SCANNER_ID]
+    selected_ids = scanner_ids or active_registry.list_ids()
     adapters = []
     for scanner_id in selected_ids:
         try:
