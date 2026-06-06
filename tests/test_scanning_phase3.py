@@ -123,6 +123,145 @@ def test_builtin_python_scanner_produces_preliminary_findings_without_source_exc
     assert all(finding.file_path == "src/app.py" for finding in result.findings)
 
 
+def make_dependency_repo(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo-deps"
+    repo.mkdir()
+    (repo / "requirements.txt").write_text(
+        """
+urllib3<1.26
+requests<2.31
+jinja2==2.11.3
+safe-lib>=1.0
+""".lstrip(),
+        encoding="utf-8",
+    )
+    (repo / "pyproject.toml").write_text(
+        "[project]\nname='scan-deps-fixture'\ndependencies=['safe-lib>=1.0']\n",
+        encoding="utf-8",
+    )
+    return repo
+
+
+def make_dependency_repo_all_formats(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo-deps-formats"
+    repo.mkdir()
+    (repo / "requirements.txt").write_text(
+        """
+urllib3<1.26
+""".lstrip(),
+        encoding="utf-8",
+    )
+    (repo / "pyproject.toml").write_text(
+        "\n".join(
+            [
+                "[project]",
+                "name = 'scan-deps-fixture'",
+                "dependencies = ['requests<2.31']",
+                "optional-dependencies = {dev = ['jinja2==2.11.3']}",
+                "",
+                "[tool.poetry.dependencies]",
+                'python = "^3.12"',
+                'urllib3 = "<1.26"',
+                'requests = "<2.31"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (repo / "Pipfile.lock").write_text(
+        json.dumps(
+            {
+                "default": {
+                    "requests": {"version": "==2.30.0"},
+                },
+                "develop": {
+                    "jinja2": {"version": "==2.11.3"},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return repo
+
+
+def test_dependency_manifest_scanner_flags_risky_dependency_specs(
+    tmp_path: Path,
+) -> None:
+    repo = make_dependency_repo(tmp_path)
+    manifest_path = write_manifest(tmp_path, repo)
+    loaded_scope = load_scope_manifest(manifest_path)
+
+    result = scan_authorized_repository(
+        loaded_scope,
+        repo,
+        scanner_ids=["builtin.dependency.manifest"],
+        local_scanner_enabled=True,
+    )
+
+    rules = {finding.rule_id for finding in result.findings}
+    assert rules == {
+        "dep.vuln-jinja2-old",
+        "dep.vuln-requests-old",
+        "dep.vuln-urllib3-old",
+    }
+    assert all(finding.scanner_id == "builtin.dependency.manifest" for finding in result.findings)
+    assert all(not finding.source_excerpt_included for finding in result.findings)
+
+
+def test_dependency_manifest_scanner_cli_outputs_json_when_enabled(
+    tmp_path: Path,
+) -> None:
+    repo = make_dependency_repo(tmp_path)
+    manifest_path = write_manifest(tmp_path, repo)
+
+    result = runner.invoke(
+        app,
+        [
+            "scan",
+            "repo",
+            "--manifest",
+            str(manifest_path),
+            "--repo",
+            str(repo),
+            "--scanner",
+            "builtin.dependency.manifest",
+            "--enable-local-scanner",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["adapters"][0]["scanner_id"] == "builtin.dependency.manifest"
+    assert payload["scanners_execute"] is True
+    assert payload["network_used"] is False
+    assert {item["rule_id"] for item in payload["findings"]} >= {
+        "dep.vuln-requests-old",
+        "dep.vuln-urllib3-old",
+    }
+
+
+def test_dependency_manifest_scanner_supports_project_toml_and_pipfile_lock(
+    tmp_path: Path,
+) -> None:
+    repo = make_dependency_repo_all_formats(tmp_path)
+    manifest_path = write_manifest(tmp_path, repo)
+    loaded_scope = load_scope_manifest(manifest_path)
+
+    result = scan_authorized_repository(
+        loaded_scope,
+        repo,
+        scanner_ids=["builtin.dependency.manifest"],
+        local_scanner_enabled=True,
+    )
+
+    rules = {finding.rule_id for finding in result.findings}
+    assert {
+        "dep.vuln-jinja2-old",
+        "dep.vuln-requests-old",
+        "dep.vuln-urllib3-old",
+    }.issubset(rules)
+
+
 def test_builtin_python_scanner_is_deterministic(tmp_path: Path) -> None:
     repo = make_python_repo(tmp_path)
     manifest_path = write_manifest(tmp_path, repo)

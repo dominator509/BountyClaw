@@ -45,12 +45,13 @@ This percentage is a governance estimate only. It reflects validated local code 
 - Phase association: Phase 3 through Phase 10
 - Subsystem association: Dependency and Supply-Chain Analysis
 - Description: Implement dependency/advisory scanning for manifests and lockfiles.
-- Why incomplete: Current scanner MVP covers built-in Python static pattern checks only; dependency vulnerability scanning is not implemented.
-- Why blocked in ChatGPT Project Mode: Local fixture implementation is possible, but real advisory database synchronization, ecosystem coverage, and external scanner comparison require local/Codex/CI environments and may require governed network access.
+- Status: Local dependency-manifest risk scanner implemented with curated, deterministic offline rules.
+- Why incomplete: Full-scale advisory-backed dependency analysis is still incomplete; dependency-manifest heuristics are implemented locally.
+- Why blocked in ChatGPT Project Mode: Real advisory DB synchronization, ecosystem breadth, vulnerable-version evidence corpus validation, and external scanner comparison require governed networked tools and runtime environments.
 - Risk level: High
 - Dependency requirements: Repository manifest detection, scanner adapter framework, advisory data source decision, redaction and findings normalization.
-- Exact future validation required: Fixture manifests with known advisories, offline advisory fixture tests, external advisory-tool comparison, no-network-default behavior tests, and canonical finding normalization checks.
-- Exact future tooling/environment required: Python 3.12+, pytest, optional OSV/pip-audit/npm-audit/Snyk-style tooling in approved local or CI environments.
+- Exact future validation required: Advisory corpus fixture tests, external advisory-tool comparison, no-network-default behavior tests, and canonical finding normalization checks.
+- Exact future tooling/environment required: Python 3.12+, pytest, advisory tooling (OSV/pip-audit/npm-audit/Snyk-style) in approved local or CI environments.
 - Recommended future agent type: Supply-chain security agent.
 - Estimated production impact: High; dependency vulnerabilities are a major bug bounty signal.
 - Completion criteria: Dependency findings are normalized into canonical findings with redacted evidence and no unapproved network calls.

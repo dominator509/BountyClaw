@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .builtin_python import BuiltInPythonStaticAdapter
+from .dependency_scanner import DependencyManifestAdapter
 from .models import ScannerAdapter
 
 DEFAULT_SCANNER_ID = "builtin.python.static"
@@ -37,4 +38,4 @@ class ScannerRegistry:
 def default_registry() -> ScannerRegistry:
     """Return the Phase 3 allowlisted scanner registry."""
 
-    return ScannerRegistry([BuiltInPythonStaticAdapter()])
+    return ScannerRegistry([BuiltInPythonStaticAdapter(), DependencyManifestAdapter()])

@@ -1620,7 +1620,8 @@ def doctor() -> None:
     table.add_row("Repository intake", "available: read-only metadata")
     table.add_row("Scan planning", "available: deterministic plan only")
     table.add_row(
-        "Local scanner execution", "available: built-in static adapter; explicit flag required"
+        "Local scanner execution",
+        "available: built-in static code scanner and dependency manifest scanner; explicit flag required",
     )
     table.add_row(
         "External scanner execution", "framework only; real scanner binaries not validated"
