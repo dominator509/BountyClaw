@@ -20,7 +20,7 @@ Every agent must:
 8. Avoid broad rewrites unless explicitly planned and approved through roadmap governance.
 9. Never claim production validation that was not performed.
 10. Preserve local-first privacy by default.
-11. Enable Rust Token Killer globally (always-on) and run it on **all** outputs (stdout, stderr, command output streams, logs, policy content, tool results, scanner output, model output, structured JSON/XML/CSV outputs, files, and persisted artifacts) by default across all agents and runtime paths before any downstream agent consumption, logging, persistence, or display.
+11. Rust Token Killer (RTK) is enabled globally across the repo as an immutable, default-on control (no opt-out). RTK must parse and normalize **all outputs** before any logging, persistence, handoff, or display. This includes stdout, stderr, return codes, command streams, logs, environment values, policy content, structured JSON/XML/CSV, files, artifacts, binary/encoded payloads, and nested attachments. No role, phase, tool, or environment may bypass this parsing.
 
 ## 3. Development Agent Roles
 
@@ -439,19 +439,22 @@ Prohibited behavior:
 
 ### 4.18 Rust Token Killer
 
-Purpose: Detect and neutralize token-like secrets, credential-like patterns, and sensitive artifacts across all runtime outputs.
+Purpose: Detect and neutralize token-like secrets, credential-like patterns, and sensitive artifacts globally across **all outputs** (before any logging, persistence, or agent handoff), including any nested, structured, serialized, or binary-derived data.
 
 Permissions:
 
-- Parse and normalize every output stream (stdout, stderr, logs, file artifacts, policy transcripts, command output, scanner output, model output, and tool results) produced by repository scans, command wrappers, model helpers, build/test tooling, repository-management tooling, and other automation paths.
+- Parse and normalize **every** output stream (stdout, stderr, return codes, logs, file artifacts, environment values, policy transcripts, command output, scanner output, model output, structured JSON/XML/CSV artifacts, binary/encoded payloads such as base64/hex/gzip-decoded outputs, API responses, patch diffs, and tool results) produced by repository scans, command wrappers, model helpers, build/test tooling, repository-management tooling, release scripts, and all other automation paths.
 - Execute globally before any raw output is logged, stored, shown to users, or fed into other agents.
-- Parse outputs in one deterministic pass and normalize redaction outcomes into a canonical "redacted output" form before downstream handling.
-- Operate as a default-on global safety control for all execution paths, channels, phases, and tools; there is no phase or agent exception.
+- Parse outputs in one deterministic pass and normalize redaction outcomes into a canonical "redacted output" form before downstream handling, regardless of whether outputs are written to terminal, file, stream, return code, artifact, telemetry, or UI channel.
+- Operate as an immutable default-on global safety control for all execution paths, channels, phases, agents, tooling integrations, and runtime paths; there is no phase, tool, or agent exception.
+- This control is global and cannot be disabled or narrowed by workflow, role, or environment.
+- Parsing is recursive: RTK must follow and sanitize nested/attached payloads, then recursively parse any decoded/re-encoded output until no further structured/binary-derived data remains.
 
 Forbidden:
 
-- No raw, unparsed outputs should be treated as canonical evidence or final output.
-- No bypass when processing scanner, CLI, policy, model, filesystem, CI, or command outputs.
+- No raw, unparsed outputs should be treated as canonical evidence, final output, or UI-facing content.
+- No bypass when processing scanner, CI, CLI, policy, model, filesystem, repository-management, or command outputs.
+- Any execution path that does not route output through Rust Token Killer before persistence, display, handoff, or agent ingestion is out of policy.
 - No scope expansion or permissions escalation based on parsed output alone.
 
 ## 5. Agent Execution Levels
@@ -569,7 +572,7 @@ Agents must halt and report a blocker if any of the following occur:
 - Gap Tracker Governance Agent: implemented in Phase 14 as metadata-only `PRODUCTION_GAP_TRACKER.md` parsing, required-field auditing, duplicate-ID checks, Codex backlog export, local package export, and verification commands. It does not inspect raw evidence, close gaps, update readiness, or claim production validation.
 - External coding agents: not yet onboarded.
 - Live LLM providers: not implemented; metadata-only provider catalog exists for future governed integration.
-- Rust Token Killer: enabled globally across execution paths (always-on) and required to parse every output type before logs, persistence, display, and downstream agent handoff.
+- Rust Token Killer: immutable, enabled globally across all execution paths (always-on) and required to parse and normalize every output type before logs, persistence, display, and downstream agent handoff, including nested structured payloads, encoded/binary-derived data, and return codes.
 
 ## 10. Change Control
 

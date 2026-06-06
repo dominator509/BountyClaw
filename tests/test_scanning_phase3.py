@@ -206,6 +206,62 @@ def make_dependency_repo_with_poetry_lock(tmp_path: Path) -> Path:
     return repo
 
 
+def make_dependency_repo_with_uv_lock(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo-deps-uv-lock"
+    repo.mkdir()
+    (repo / "uv.lock").write_text(
+        "\n".join(
+            [
+                'version = "1"',
+                "",
+                "[[package]]",
+                'name = "requests"',
+                'version = "2.30.0"',
+                "",
+                "[[package]]",
+                'name = "urllib3"',
+                'version = "1.25.11"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return repo
+
+
+def make_dependency_repo_with_setup_files(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo-deps-setup"
+    repo.mkdir()
+    (repo / "setup.py").write_text(
+        "\n".join(
+            [
+                "from setuptools import setup",
+                "",
+                "base_requirements = [",
+                '    "urllib3<1.26",',
+                '    "requests<2.31",',
+                "]",
+                "",
+                "setup(",
+                '    name="scan-setup-fixture",',
+                "    install_requires=base_requirements,",
+                ")",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (repo / "setup.cfg").write_text(
+        "\n".join(
+            [
+                "[options]",
+                "install_requires =",
+                "    jinja2==2.11.3",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return repo
+
+
 def make_python_and_dependency_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo-mixed"
     (repo / "src").mkdir(parents=True)
@@ -320,6 +376,39 @@ def test_dependency_manifest_scanner_supports_poetry_lock_file(
         "dep.vuln-urllib3-old",
     }
 
+
+def test_dependency_manifest_scanner_supports_uv_lock_file(
+    tmp_path: Path,
+) -> None:
+    repo = make_dependency_repo_with_uv_lock(tmp_path)
+    manifest_path = write_manifest(tmp_path, repo)
+    loaded_scope = load_scope_manifest(manifest_path)
+
+    result = scan_authorized_repository(
+        loaded_scope,
+        repo,
+        scanner_ids=["builtin.dependency.manifest"],
+        local_scanner_enabled=True,
+    )
+
+    rules = {finding.rule_id for finding in result.findings}
+    assert rules == {"dep.vuln-requests-old", "dep.vuln-urllib3-old"}
+
+
+def test_dependency_manifest_scanner_supports_setup_py_and_setup_cfg(tmp_path: Path) -> None:
+    repo = make_dependency_repo_with_setup_files(tmp_path)
+    manifest_path = write_manifest(tmp_path, repo)
+    loaded_scope = load_scope_manifest(manifest_path)
+
+    result = scan_authorized_repository(
+        loaded_scope,
+        repo,
+        scanner_ids=["builtin.dependency.manifest"],
+        local_scanner_enabled=True,
+    )
+
+    rules = {finding.rule_id for finding in result.findings}
+    assert {"dep.vuln-jinja2-old", "dep.vuln-requests-old", "dep.vuln-urllib3-old"} <= rules
 
 def test_scan_without_scanner_override_runs_default_scan_set(
     tmp_path: Path,

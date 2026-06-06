@@ -739,7 +739,7 @@ Validation completed locally:
 
 Environment-limited validation:
 
-- `pip-audit` was installed and attempted but failed because DNS resolution to `pypi.org` failed in this container. It remains a tracked external validation gap.
+- `pip-audit --progress-spinner off` was executed locally in an isolated environment; no third-party vulnerabilities were reported. `bountyclaw` itself remains a local editable install and is currently not auditable by PyPI package metadata alone. Hostile advisory coverage and package-distribution-level dependency audit closure remain tracked as external completion gaps.
 
 Rollback:
 

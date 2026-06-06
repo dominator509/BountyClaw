@@ -4,7 +4,7 @@ BountyClaw is a local-first, CLI-first, authorized bug bounty research assistant
 
 Current ChatGPT Project Mode state: **Phase 19 completed locally**.
 
-Phase 19 executes and records local quality/security gates. Tests, compile checks, ruff formatting, ruff lint, mypy, Bandit, package build, clean wheel install, and installed CLI smoke checks passed after remediation. `pip-audit` was installed and attempted but remains deferred because DNS resolution to `pypi.org` failed in this environment. Phase 19 does not claim hosted CI, branch protection, online dependency audit completion, evidence acceptance, gap closure, production deployment, active validation, live provider use, real MCP/browser runtime use, or automated bounty submission.
+Phase 19 executes and records local quality/security gates. Tests, compile checks, ruff formatting, ruff lint, mypy, Bandit, package build, clean wheel install, and installed CLI smoke checks passed after remediation. `pip-audit --progress-spinner off` was executed in an isolated local environment with no known vulnerabilities reported for third-party dependencies; local editable `bountyclaw` remains unauditable by this path. Phase 19 still does not claim hosted CI, branch protection, online dependency-audit completion, evidence acceptance, gap closure, production deployment, active validation, live provider use, real MCP/browser runtime use, or automated bounty submission.
 
 ## Local validation
 
@@ -47,7 +47,7 @@ PYTHONPATH=src python -m bountyclaw quality-gates verify --root . --json
 PYTHONPATH=src python scripts/phase19_verify.py --root . --json
 ```
 
-`pip-audit --progress-spinner off` must be rerun in hosted CI or a local environment with approved DNS/network or internal advisory mirror access.
+`pip-audit --progress-spinner off` should still be rerun in hosted CI or a local environment with approved advisory DB/access or package-distribution validation before dependency-audit gaps are formally closed.
 
 ## Representative workflow commands
 

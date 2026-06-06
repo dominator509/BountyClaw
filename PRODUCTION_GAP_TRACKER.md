@@ -45,7 +45,7 @@ This percentage is a governance estimate only. It reflects validated local code 
 - Phase association: Phase 3 through Phase 10
 - Subsystem association: Dependency and Supply-Chain Analysis
 - Description: Implement dependency/advisory scanning for manifests and lockfiles.
-- Status: Local dependency-manifest risk scanner implemented with curated, deterministic offline rules; now participates by default in `scan` and `findings collect` runs when no explicit `--scanner` override is provided, and now scans `requirements*`, `pyproject.toml`, `Pipfile.lock`, and `poetry.lock` formats.
+- Status: Local dependency-manifest risk scanner implemented with curated, deterministic offline rules; now participates by default in `scan` and `findings collect` runs when no explicit `--scanner` override is provided, and now scans `requirements*`, `pyproject.toml`, `Pipfile.lock`, `poetry.lock`, `uv.lock`, `setup.py`, and `setup.cfg` formats.
 - Why incomplete: Full-scale advisory-backed dependency analysis is still incomplete; dependency-manifest heuristics are implemented locally.
 - Why blocked in ChatGPT Project Mode: Real advisory DB synchronization, ecosystem breadth, vulnerable-version evidence corpus validation, and external scanner comparison require governed networked tools and runtime environments.
 - Risk level: High

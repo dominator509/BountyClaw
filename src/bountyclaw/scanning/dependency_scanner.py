@@ -7,6 +7,8 @@ call advisory APIs or external vulnerability databases.
 
 from __future__ import annotations
 
+import ast
+import configparser
 import hashlib
 import json
 import re
@@ -144,6 +146,12 @@ def _scan_manifest(
         return _scan_pipfile_lock(context, manifest_path)
     if manifest_path.name == "poetry.lock":
         return _scan_poetry_lock(context, manifest_path)
+    if manifest_path.name == "uv.lock":
+        return _scan_uv_lock(context, manifest_path)
+    if manifest_path.name == "setup.py":
+        return _scan_setup_py(context, manifest_path)
+    if manifest_path.name == "setup.cfg":
+        return _scan_setup_cfg(context, manifest_path)
     return []
 
 
@@ -154,6 +162,9 @@ def _find_dependency_files(root: Path) -> list[Path]:
         "pyproject.toml",
         "Pipfile.lock",
         "poetry.lock",
+        "uv.lock",
+        "setup.py",
+        "setup.cfg",
     ]
     return [root / name for name in candidates if (root / name).exists()]
 
@@ -338,6 +349,164 @@ def _scan_poetry_lock(context: ScannerContext, path: Path) -> list[PreliminaryFi
             continue
         package_name, specifiers = parsed
         for rule, requested_version in _matching_rules(package_name, specifiers):
+            findings.append(
+                _finding_for_rule(
+                    rule=rule,
+                    context=context,
+                    relative_path=relative_path,
+                    line_number=None,
+                    version_request=requested_version,
+                )
+            )
+    return findings
+
+
+def _scan_uv_lock(context: ScannerContext, path: Path) -> list[PreliminaryFinding]:
+    relative_path = path.relative_to(context.repository_root).as_posix()
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+
+    package_entries = []
+    raw_package_sections = payload.get("package")
+    if isinstance(raw_package_sections, list):
+        package_entries.extend(raw_package_sections)
+    raw_packages = payload.get("packages")
+    if isinstance(raw_packages, list):
+        package_entries.extend(raw_packages)
+
+    findings: list[PreliminaryFinding] = []
+    for package in package_entries:
+        if not isinstance(package, dict):
+            continue
+        name = package.get("name")
+        version = package.get("version")
+        if not isinstance(name, str) or not isinstance(version, str):
+            continue
+        parsed = _parse_requirement_text(f"{name}=={version}")
+        if parsed is None:
+            continue
+        package_name, specifiers = parsed
+        for rule, requested_version in _matching_rules(package_name, specifiers):
+            findings.append(
+                _finding_for_rule(
+                    rule=rule,
+                    context=context,
+                    relative_path=relative_path,
+                    line_number=None,
+                    version_request=requested_version,
+                )
+            )
+    return findings
+
+
+def _scan_setup_py(context: ScannerContext, path: Path) -> list[PreliminaryFinding]:
+    relative_path = path.relative_to(context.repository_root).as_posix()
+    try:
+        parsed_ast = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, SyntaxError):
+        return []
+
+    literal_values: dict[str, list[str]] = {}
+    findings: list[PreliminaryFinding] = []
+
+    def _extract_requirements(value: ast.AST) -> list[str] | None:
+        try:
+            evaluated = ast.literal_eval(value)
+        except (ValueError, SyntaxError, TypeError):
+            return None
+        if isinstance(evaluated, str):
+            return [evaluated]
+        if isinstance(evaluated, (list, tuple, set)):
+            requirements: list[str] = []
+            for item in evaluated:
+                if isinstance(item, str):
+                    requirements.append(item)
+            return requirements
+        return None
+
+    for node in parsed_ast.body:
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        if not isinstance(target, ast.Name):
+            continue
+        extracted = _extract_requirements(node.value)
+        if extracted is not None:
+            literal_values[target.id] = extracted
+
+    for node in ast.walk(parsed_ast):
+        if not isinstance(node, ast.Call):
+            continue
+
+        func_name = None
+        if isinstance(node.func, ast.Name):
+            func_name = node.func.id
+        elif isinstance(node.func, ast.Attribute):
+            func_name = node.func.attr
+        if func_name != "setup":
+            continue
+
+        for keyword in node.keywords:
+            if keyword.arg is None or keyword.arg not in {"install_requires", "requires"}:
+                continue
+            requirements: list[str] = []
+            direct = _extract_requirements(keyword.value)
+            if direct is not None:
+                requirements.extend(direct)
+            elif isinstance(keyword.value, ast.Name):
+                requirements.extend(literal_values.get(keyword.value.id, []))
+            for requirement_text in requirements:
+                parsed = _parse_requirement_text(requirement_text)
+                if parsed is None:
+                    continue
+                package, specifiers = parsed
+                for rule, requested_version in _matching_rules(package, specifiers):
+                    findings.append(
+                        _finding_for_rule(
+                            rule=rule,
+                            context=context,
+                            relative_path=relative_path,
+                            line_number=None,
+                            version_request=requested_version,
+                        )
+                    )
+    return findings
+
+
+def _scan_setup_cfg(context: ScannerContext, path: Path) -> list[PreliminaryFinding]:
+    relative_path = path.relative_to(context.repository_root).as_posix()
+    parser = configparser.ConfigParser()
+    try:
+        parser.read(path, encoding="utf-8")
+    except (OSError, configparser.Error):
+        return []
+
+    requirements: list[str] = []
+    for section in ("options", "options.extras_require"):
+        if not parser.has_section(section):
+            continue
+
+        for option in ("install_requires", "setup_requires", "tests_require"):
+            value = parser.get(section, option, fallback="").strip()
+            if value:
+                requirements.extend(line.strip() for line in value.splitlines() if line.strip())
+
+        if section != "options.extras_require":
+            continue
+        for option in parser.options(section):
+            value = parser.get(section, option, fallback="").strip()
+            if value:
+                requirements.extend(line.strip() for line in value.splitlines() if line.strip())
+
+    findings: list[PreliminaryFinding] = []
+    for requirement_text in requirements:
+        parsed = _parse_requirement_text(requirement_text)
+        if parsed is None:
+            continue
+        package, specifiers = parsed
+        for rule, requested_version in _matching_rules(package, specifiers):
             findings.append(
                 _finding_for_rule(
                     rule=rule,

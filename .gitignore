@@ -32,6 +32,7 @@ test-results/
 # Tooling databases
 .bandit
 .bandit_cache/
+pip-wheel-metadata/
 
 # Editors and IDEs
 .idea/
@@ -41,6 +42,11 @@ test-results/
 *.swn
 *~
 \#*
+
+# Python and project tooling cache
+.cache/
+.python-version
+.coverage.*
 
 # OS artifacts
 .DS_Store
@@ -59,6 +65,15 @@ logs/
 local.db
 *.sqlite
 *.sqlite3
+
+# Local validation and proof artifacts
+validation_evidence/
+validation_baseline/
+validation_runs/
+readiness_dashboard_package/
+handoff/
+output/
+tmp_output/
 
 # Misc temporary artifacts
 tmp/

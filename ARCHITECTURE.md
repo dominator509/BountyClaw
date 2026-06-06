@@ -515,7 +515,7 @@ Rollback baseline: Phase 17 closure-gate/readiness-attestation governance remain
 
 ## Phase 19 Architecture Update
 
-Phase 19 adds the Local Quality/Security Gate subsystem. It executes and records locally codeable quality gates, including tests, compile checks, ruff formatting and linting, mypy type checks, Bandit security scanning, package build, and clean wheel install smoke validation. It also records the attempted but environment-blocked `pip-audit` dependency audit.
+Phase 19 adds the Local Quality/Security Gate subsystem. It executes and records locally codeable quality gates, including tests, compile checks, ruff formatting and linting, mypy type checks, Bandit security scanning, package build, and clean wheel install smoke validation. It also records the executed dependency-audit run (`pip-audit --progress-spinner off`) with local environment constraints, including editable-local `bountyclaw` skip behavior.
 
 Phase 19 does not expand target-facing capability. It does not contact targets, execute external scanners, enable live model providers, launch MCP/browser runtimes, inspect raw evidence, close production gaps, or claim hosted CI/branch protection.
 

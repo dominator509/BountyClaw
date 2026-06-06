@@ -136,6 +136,6 @@ Executed locally inside ChatGPT Project Mode:
 
 Deferred:
 
-- `pip-audit --progress-spinner off`: attempted but failed because DNS resolution to `pypi.org` failed in this environment. Complete this in hosted CI or an approved local environment with advisory access before closing dependency-audit gaps.
+- `pip-audit --progress-spinner off`: executed in an isolated local environment and reported no known vulnerabilities for third-party dependencies; local editable `bountyclaw` remains unauditable through this path. Complete full dependency-audit closure via hosted CI or package-distribution-level validation with review before closing dependency-audit gaps.
 
 No live target contact, live provider call, real MCP/browser runtime, active validation, evidence acceptance, or bounty submission was performed.

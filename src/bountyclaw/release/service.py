@@ -1,8 +1,7 @@
 """Local release-control service for Phase 9."""
 
-from __future__ import annotations
-
 import shutil
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -100,6 +99,83 @@ def _deferred(
         deferred_reason=deferred_reason,
         future_validation_required=future_validation_required,
         future_environment_required=future_environment_required,
+    )
+
+
+def _tool_check(
+    *,
+    check_id: str,
+    category: str,
+    tool: str,
+) -> ReleaseCheck:
+    """Validate optional local quality/security tool availability.
+
+    The check does not run full gates, but verifies the executable exists and can
+    at least report its own version in this environment.
+    """
+
+    path = shutil.which(tool)
+    if path is None:
+        return _deferred(
+            check_id=check_id,
+            category=category,
+            summary=f"Local optional static/security tool availability: {tool}",
+            deferred_reason=(f"The local environment does not currently expose `{tool}` on PATH."),
+            future_validation_required=(
+                f"Install dev extras and verify {tool} is available before release attempts."
+            ),
+            future_environment_required=(
+                "Codex/local/CI environment with package installation and network access to package indexes where permitted."
+            ),
+        )
+
+    try:
+        result = subprocess.run(
+            [tool, "--version"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as exc:
+        return _deferred(
+            check_id=check_id,
+            category=category,
+            summary=f"Local optional static/security tool availability: {tool}",
+            deferred_reason=f"{tool} was found in PATH but could not be executed: {exc}",
+            future_validation_required=(
+                f"Repair runtime health for {tool} and rerun release verification."
+            ),
+            future_environment_required=(
+                "Codex/local/CI environment with package installation and network access to package indexes where permitted."
+            ),
+        )
+
+    if result.returncode != 0:
+        return _deferred(
+            check_id=check_id,
+            category=category,
+            summary=f"Local optional static/security tool availability: {tool}",
+            deferred_reason=(
+                f"{tool} execution failed (`{tool} --version` returned {result.returncode})."
+            ),
+            future_validation_required=(
+                f"Repair runtime health for {tool} and rerun release verification."
+            ),
+            future_environment_required=(
+                "Codex/local/CI environment with package installation and package-index access where permitted."
+            ),
+        )
+
+    version = (result.stdout or result.stderr).strip().splitlines()[0]
+    return _pass_fail(
+        check_id=check_id,
+        category=category,
+        passed=True,
+        summary=f"Local optional static/security tool available: {tool}",
+        evidence=[f"{tool}: {version}", f"path={path}"],
+        required_for_commit=False,
+        required_for_external_release=True,
     )
 
 
@@ -331,13 +407,10 @@ def verify_release_controls(root: Path) -> ReleaseVerificationResult:
             )
         else:
             checks.append(
-                _deferred(
+                _tool_check(
                     check_id=f"REL-LOCAL-TOOL-{tool}",
                     category="environment_limited",
-                    summary=f"Local optional static/security tool availability: {tool}",
-                    deferred_reason="The ChatGPT project container may not include optional dev/security tools and cannot install from the internet deterministically.",
-                    future_validation_required=f"Install dev extras, run {tool} gate, and record results in CI/local validation logs.",
-                    future_environment_required="Codex/local/CI environment with package installation and network access to package indexes where permitted.",
+                    tool=tool,
                 )
             )
 
