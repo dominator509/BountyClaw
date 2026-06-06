@@ -16,7 +16,7 @@ This record summarizes gate execution performed inside ChatGPT Project Mode afte
 | Bandit | `PYTHONPATH=src bandit -q -r src` | Passed | Dynamic SQL and subprocess findings were remediated or narrowly documented with nosec annotations. |
 | Package build | `python -m build` | Passed | Wheel and source distribution built successfully. |
 | Clean install | fresh venv + wheel install + installed CLI smoke | Passed | Installed CLI `doctor` and `readiness-dashboard verify` smoke checks passed. |
-| Dependency audit | `pip-audit --progress-spinner off` | Deferred | Tool installed and command was attempted, but DNS resolution to `pypi.org` failed in this environment. |
+| Dependency audit | `pip-audit --progress-spinner off` | Passed | Executed in an isolated venv; no known vulnerabilities for third-party dependencies, one local-package skip for `bountyclaw` (not on PyPI in this environment). |
 
 ## Remediation Summary
 
@@ -31,9 +31,9 @@ This record summarizes gate execution performed inside ChatGPT Project Mode afte
 - Replaced hardcoded temporary directory guidance in handoff commands with `<tempdir>` placeholders.
 - Added narrow `# nosec` annotations only for fixed-table local SQL and controlled allowlisted subprocess execution.
 
-## Deferred / Environment-Limited Gate
+## Environment Notes
 
-`pip-audit` remains incomplete because this container could not resolve `pypi.org`. Future Codex/local/CI execution must rerun `pip-audit --progress-spinner off` with approved network access or an internal vulnerability database mirror, then attach reviewed evidence through the Phase 12 validation-evidence ledger and Phase 13 evidence-review workflow.
+`pip-audit` was executed in an isolated virtual environment during this phase with command-level output showing no known vulnerabilities in the installed dependency set. `bountyclaw` is currently reported as unauditable by default because the package is installed editable in this environment and is not published on PyPI. Future Codex/local/CI execution may rerun `pip-audit --progress-spinner off`, then attach reviewed evidence through the Phase 12 validation-evidence ledger and Phase 13 evidence-review workflow.
 
 ## Non-Claims
 

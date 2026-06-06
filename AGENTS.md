@@ -20,7 +20,7 @@ Every agent must:
 8. Avoid broad rewrites unless explicitly planned and approved through roadmap governance.
 9. Never claim production validation that was not performed.
 10. Preserve local-first privacy by default.
-11. Enable Rust Token Killer globally and run it on **all** outputs (command output, scanner output, model output, policy content, tool results, command streams, logs, and persisted artifacts) by default across all agents and runtime paths before any downstream agent consumption, logging, persistence, or display.
+11. Enable Rust Token Killer globally (always-on) and run it on **all** outputs (stdout, stderr, command output streams, logs, policy content, tool results, scanner output, model output, structured JSON/XML/CSV outputs, files, and persisted artifacts) by default across all agents and runtime paths before any downstream agent consumption, logging, persistence, or display.
 
 ## 3. Development Agent Roles
 
@@ -443,10 +443,10 @@ Purpose: Detect and neutralize token-like secrets, credential-like patterns, and
 
 Permissions:
 
-- Parse and normalize every output stream (stdout, stderr, logs, file artifacts, policy transcripts, command output, scanner output, model output, and tool results) produced by repository scans, command wrappers, model helpers, and repository-management tooling.
+- Parse and normalize every output stream (stdout, stderr, logs, file artifacts, policy transcripts, command output, scanner output, model output, and tool results) produced by repository scans, command wrappers, model helpers, build/test tooling, repository-management tooling, and other automation paths.
 - Execute globally before any raw output is logged, stored, shown to users, or fed into other agents.
 - Parse outputs in one deterministic pass and normalize redaction outcomes into a canonical "redacted output" form before downstream handling.
-- Operate as a default-on global safety control for all execution paths, phases, and tools; there is no phase or agent exception.
+- Operate as a default-on global safety control for all execution paths, channels, phases, and tools; there is no phase or agent exception.
 
 Forbidden:
 
@@ -569,7 +569,7 @@ Agents must halt and report a blocker if any of the following occur:
 - Gap Tracker Governance Agent: implemented in Phase 14 as metadata-only `PRODUCTION_GAP_TRACKER.md` parsing, required-field auditing, duplicate-ID checks, Codex backlog export, local package export, and verification commands. It does not inspect raw evidence, close gaps, update readiness, or claim production validation.
 - External coding agents: not yet onboarded.
 - Live LLM providers: not implemented; metadata-only provider catalog exists for future governed integration.
-- Rust Token Killer: enabled globally across execution paths and required to parse all outputs before logs, persistence, and downstream agent handoff.
+- Rust Token Killer: enabled globally across execution paths (always-on) and required to parse every output type before logs, persistence, display, and downstream agent handoff.
 
 ## 10. Change Control
 

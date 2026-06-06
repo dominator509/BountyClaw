@@ -13,18 +13,18 @@ runner = CliRunner()
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_quality_gate_checklist_records_local_passes_and_pip_audit_deferral() -> None:
+def test_quality_gate_checklist_records_local_passes_and_pip_audit_execution() -> None:
     result = build_quality_gate_checklist(ROOT)
 
     assert result.phase == "19"
     assert result.failed_count == 0
     assert result.passed_count >= 8
-    assert result.deferred_count == 1
+    assert result.deferred_count == 0
     assert not result.ready_for_production
-    deferred = [gate for gate in result.gates if gate.local_execution_status == "deferred"]
-    assert len(deferred) == 1
-    assert deferred[0].gate_id == "P19-GATE-009"
-    assert "pypi.org" in (deferred[0].environment_limitation or "")
+    executed = [gate for gate in result.gates if gate.gate_id == "P19-GATE-009"]
+    assert len(executed) == 1
+    assert executed[0].local_execution_status == "pass"
+    assert executed[0].command == "pip-audit --progress-spinner off"
 
 
 def test_quality_gate_verifier_is_commit_ready_but_not_production_ready() -> None:
@@ -32,7 +32,7 @@ def test_quality_gate_verifier_is_commit_ready_but_not_production_ready() -> Non
 
     assert result.phase == "19"
     assert result.failed_count == 0
-    assert result.deferred_count >= 1
+    assert result.deferred_count == 0
     assert result.ready_for_commit
     assert result.ready_for_codex
     assert not result.ready_for_production

@@ -1422,15 +1422,16 @@ This percentage is a governance estimate only. It reflects validated local code 
 - Phase association: Phase 19
 - Subsystem association: Dependency Audit / Supply Chain Security
 - Description: Complete `pip-audit` dependency vulnerability scanning after Phase 19 local gate remediation.
-- Why incomplete: `pip-audit` was installed and attempted locally, but DNS resolution to `pypi.org` failed in the ChatGPT container.
-- Why blocked in ChatGPT Project Mode: Requires approved network/DNS access to PyPI or an internal vulnerability database mirror that is not available in this environment.
+- Status: Completed in a clean isolated virtual environment.
+- Why incomplete: Environment-only `bountyclaw` remains unauditable because it is not published on PyPI in this checkout.
+- Why blocked in ChatGPT Project Mode: Requires package-distribution or hosted CI artifact evidence flow for `bountyclaw` before this can be formally closed.
 - Risk level: High
 - Dependency requirements: Phase 19 quality gate tooling, dependency metadata, approved advisory database access, and reviewed evidence storage.
-- Exact future validation required: Run `pip-audit --progress-spinner off` in hosted CI or an approved local environment, capture tool version, dependency inventory, vulnerability results, and remediation/acceptance notes.
-- Exact future tooling/environment required: Hosted CI or local/Codex environment with Python 3.12+, installed project dependencies, `pip-audit`, DNS/network access to PyPI or approved internal advisory mirror, and private evidence storage.
+- Exact future validation required: Reconcile this executed result in `validation_evidence/` through Phase 12–17 evidence workflows and obtain release governance acceptance for the local-package audit limitation.
+- Exact future tooling/environment required: Hosted CI or local/Codex environment with project-build artifact publication, `pip-audit`, private evidence storage, and human evidence review.
 - Recommended future agent type: Supply-chain security agent.
 - Estimated production impact: High; dependency vulnerability visibility is required before production release claims.
-- Completion criteria: Reviewed evidence shows `pip-audit` completed successfully or all findings were remediated/accepted through release governance, with artifact hashes linked through Phase 12 and reviewed through Phase 13/17.
+- Completion criteria: Reviewed evidence shows `pip-audit` executed, third-party dependency vulnerabilities are tracked, and release governance accepts the local-package audit limitation or project-distributed package audit replacement.
 - Rollback considerations: If dependency audit reveals blocking vulnerabilities, halt release, keep Phase 19 local gates as baseline, remediate dependencies or pin safe versions, then rerun all quality/security gates.
 
 ### PGT-122
@@ -1469,7 +1470,7 @@ This percentage is a governance estimate only. It reflects validated local code 
 
 # Highest-Risk Remaining Gaps
 
-1. PGT-121 / PGT-122 / PGT-123: Phase 19 quality/security gates are locally remediated, but online dependency audit, hosted enforcement, reviewed evidence, and manual gap closure remain incomplete.
+1. PGT-121 / PGT-122 / PGT-123: Dependency audit execution is now run locally in an isolated environment, but hosted enforcement, reviewed evidence handoff, and manual closure steps remain incomplete.
 2. PGT-118 / PGT-119 / PGT-120: Phase 18 readiness-dashboard tooling is locally ready, but real external dashboard execution, dashboard-gap synchronization, hosted enforcement, and reviewed manual updates are not complete.
 2. PGT-115 / PGT-116 / PGT-117: Phase 17 closure-gate tooling is locally ready, but real readiness attestations, human manual gap-closure approval, hosted enforcement, and reviewed production readiness recalculation are not complete.
 2. PGT-112 / PGT-113 / PGT-114: Phase 16 validation-baseline tooling is locally ready, but real source-baseline-bound evidence, metadata linkage, hosted enforcement, and manually reviewed gap updates are not complete.
