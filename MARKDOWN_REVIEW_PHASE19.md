@@ -49,7 +49,7 @@ All Markdown files in the unzipped Phase 18 repository bundle were opened and re
 | `RELEASE.md` | 83 | 6211 | `9a4696cc6563a17467fc7f0d1ddcc9ab6b6d85408f676de1d12af9c4c13bd10b` | Confirmed release gates existed but needed actual local execution evidence. |
 | `ROADMAP.md` | 714 | 40102 | `2edbae0d3b7ef63c19bb94a8aadd7a9469afdf486d94a6e0194dfe2dab7b0483` | Confirmed Phase 18 completion and external validation backlog. |
 | `ROLLBACK.md` | 53 | 3092 | `bd77732a1dbf937ad9b92064a68872914c2f74d3af434ff20f5256a2e58660a7` | Confirmed rollback baseline and need for Phase 19 rollback instructions. |
-| `SECURITY_VALIDATION.md` | 122 | 6905 | `c3b59a21c031d123a5e026ade94c969892308fce01ce11af3358b8f4009e26c4` | Confirmed security validation ledger needed local ruff/mypy/Bandit/build/install evidence and pip-audit deferral. |
+| `SECURITY_VALIDATION.md` | 122 | 6905 | `c3b59a21c031d123a5e026ade94c969892308fce01ce11af3358b8f4009e26c4` | Confirmed security validation ledger includes local ruff/mypy/Bandit/build/install evidence and local `pip-audit --progress-spinner off` execution with `bountyclaw` skip when installed in editable mode. |
 
 ## Reconciliation Notes
 
