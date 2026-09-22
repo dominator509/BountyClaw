@@ -54,9 +54,11 @@ def test_ci_workflow_defines_least_privilege_quality_security_and_package_gates(
 
     assert "permissions:" in workflow
     assert "contents: read" in workflow
-    assert "actions/checkout@v6" in workflow
+    # dominator509 org Actions allowlist: only dominator509-owned action repos
+    # may run, so CI uses these faithful forks of the upstream v6 actions.
+    assert "dominator509/checkout@v6" in workflow
     assert "persist-credentials: false" in workflow
-    assert "actions/setup-python@v6" in workflow
+    assert "dominator509/setup-python@v6" in workflow
     assert "ruff check src tests" in workflow
     assert "mypy src" in workflow
     assert "bandit -q -r src" in workflow
@@ -119,7 +121,9 @@ def test_release_verification_degrades_tool_checks_to_deferred_on_missing_tool(
         if dependency == "python":
             continue
         assert f"REL-LOCAL-TOOL-{dependency}" in deferred
-        assert "does not currently expose" in deferred[f"REL-LOCAL-TOOL-{dependency}"].deferred_reason
+        assert (
+            "does not currently expose" in deferred[f"REL-LOCAL-TOOL-{dependency}"].deferred_reason
+        )
 
 
 def test_release_cli_commands_render_json() -> None:

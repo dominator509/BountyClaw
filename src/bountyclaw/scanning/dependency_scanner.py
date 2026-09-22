@@ -436,19 +436,19 @@ def _scan_setup_py(context: ScannerContext, path: Path) -> list[PreliminaryFindi
         if extracted is not None:
             literal_values[target.id] = extracted
 
-    for node in ast.walk(parsed_ast):
-        if not isinstance(node, ast.Call):
+    for walk_node in ast.walk(parsed_ast):
+        if not isinstance(walk_node, ast.Call):
             continue
 
         func_name = None
-        if isinstance(node.func, ast.Name):
-            func_name = node.func.id
-        elif isinstance(node.func, ast.Attribute):
-            func_name = node.func.attr
+        if isinstance(walk_node.func, ast.Name):
+            func_name = walk_node.func.id
+        elif isinstance(walk_node.func, ast.Attribute):
+            func_name = walk_node.func.attr
         if func_name != "setup":
             continue
 
-        for keyword in node.keywords:
+        for keyword in walk_node.keywords:
             if keyword.arg is None or keyword.arg not in {"install_requires", "requires"}:
                 continue
             requirements: list[str] = []

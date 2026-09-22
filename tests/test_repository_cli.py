@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import yaml
@@ -9,6 +10,15 @@ from typer.testing import CliRunner
 from bountyclaw.cli import app
 
 runner = CliRunner()
+
+_ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    # Rich may emit color (e.g. CI sets FORCE_COLOR); option names get split
+    # into separately-styled spans ("-" / "-json"), so strip styling before
+    # matching on help text.
+    return _ANSI_ESCAPE.sub("", text)
 
 
 def make_repo(tmp_path: Path) -> Path:
@@ -197,5 +207,5 @@ def test_repo_command_help_advertises_json_shortcut() -> None:
 
     assert inspect_result.exit_code == 0
     assert plan_result.exit_code == 0
-    assert "--json" in inspect_result.output
-    assert "--json" in plan_result.output
+    assert "--json" in _strip_ansi(inspect_result.output)
+    assert "--json" in _strip_ansi(plan_result.output)
