@@ -410,6 +410,7 @@ def test_dependency_manifest_scanner_supports_setup_py_and_setup_cfg(tmp_path: P
     rules = {finding.rule_id for finding in result.findings}
     assert {"dep.vuln-jinja2-old", "dep.vuln-requests-old", "dep.vuln-urllib3-old"} <= rules
 
+
 def test_scan_without_scanner_override_runs_default_scan_set(
     tmp_path: Path,
 ) -> None:

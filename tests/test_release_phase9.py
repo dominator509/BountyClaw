@@ -119,7 +119,9 @@ def test_release_verification_degrades_tool_checks_to_deferred_on_missing_tool(
         if dependency == "python":
             continue
         assert f"REL-LOCAL-TOOL-{dependency}" in deferred
-        assert "does not currently expose" in deferred[f"REL-LOCAL-TOOL-{dependency}"].deferred_reason
+        assert (
+            "does not currently expose" in deferred[f"REL-LOCAL-TOOL-{dependency}"].deferred_reason
+        )
 
 
 def test_release_cli_commands_render_json() -> None:
