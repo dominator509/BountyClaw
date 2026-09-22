@@ -54,9 +54,11 @@ def test_ci_workflow_defines_least_privilege_quality_security_and_package_gates(
 
     assert "permissions:" in workflow
     assert "contents: read" in workflow
-    assert "actions/checkout@v6" in workflow
+    # dominator509 org Actions allowlist: only dominator509-owned action repos
+    # may run, so CI uses these faithful forks of the upstream v6 actions.
+    assert "dominator509/checkout@v6" in workflow
     assert "persist-credentials: false" in workflow
-    assert "actions/setup-python@v6" in workflow
+    assert "dominator509/setup-python@v6" in workflow
     assert "ruff check src tests" in workflow
     assert "mypy src" in workflow
     assert "bandit -q -r src" in workflow
