@@ -1,7 +1,7 @@
 """Local release-control service for Phase 9."""
 
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import tomllib
 from pathlib import Path
 
@@ -130,12 +130,13 @@ def _tool_check(
         )
 
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603
             [tool, "--version"],
             capture_output=True,
             text=True,
             check=False,
             timeout=5,
+            shell=False,
         )
     except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as exc:
         return _deferred(
